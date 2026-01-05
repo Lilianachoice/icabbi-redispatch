@@ -5,8 +5,8 @@ const app = express();
 app.use(express.json());
 
 // ===== Configurações =====
-const API_BASE = "https://api.coolnagour.com/v2/bookings"; // Base da API iCabbi
-const API_KEY = process.env.ICABBI_API_KEY; // Chave segura do Render
+const API_BASE = "https://api.coolnagour.com/v2/bookings/dispatchbooking"; // endpoint de dispatch
+const API_KEY = process.env.ICABBI_API_KEY; // a tua chave segura guardada no Render
 
 // ===== Função para reenviar reserva =====
 async function resend_booking(trip_id, vehicle_id, driver_id) {
@@ -18,34 +18,30 @@ async function resend_booking(trip_id, vehicle_id, driver_id) {
         enable_active_queue: false
     };
 
-    console.log("===============================================");
-    console.log("[DISPATCH] Enviando payload para iCabbi:");
-    console.log(JSON.stringify(payload, null, 2));
-
-    // ⚠️ Aqui usamos o header correto para iCabbi
     const headers = {
-        "X-App-Key": API_KEY,         // <--- a chave vai pelo header seguro
+        "Authorization": API_KEY, // igual ao Postman
         "Content-Type": "application/json"
     };
 
+    console.log("===============================================");
+    console.log("[DISPATCH] Enviando payload para iCabbi:", JSON.stringify(payload, null, 2));
+
     try {
-        const response = await fetch(`${API_BASE}/dispatchbooking`, {
+        const response = await fetch(API_BASE, {
             method: "POST",
             headers,
             body: JSON.stringify(payload)
         });
 
-        const respText = await response.text();
-
-        if (response.ok) {
+        const data = await response.json();
+        if (!data.error) {
             console.log(`[OK] Reserva ${trip_id} reenviada para motorista ${driver_id}`);
         } else {
-            console.log(`[ERRO] Não foi possível reenviar ${trip_id}: ${respText}`);
+            console.log(`[ERRO] Não foi possível reenviar ${trip_id}:`, data);
         }
 
-        console.log("[DISPATCH RESPONSE COMPLETO]", respText);
+        console.log("[DISPATCH RESPONSE COMPLETO]", JSON.stringify(data, null, 2));
         console.log("===============================================");
-
     } catch (err) {
         console.log(`[EXCEÇÃO] Erro ao reenviar ${trip_id}: ${err}`);
     }
@@ -53,7 +49,7 @@ async function resend_booking(trip_id, vehicle_id, driver_id) {
 
 // ===== Função para gerir redispatch automático =====
 async function dispatchWithRetries(trip_id, vehicle_id, driver_id) {
-    const attempts = [30 * 1000, 60 * 1000, 60 * 1000]; // 30s, 1min, 1min
+    const attempts = [30 * 1000, 60 * 1000, 60 * 1000]; // 30s, 60s, 60s
 
     for (let i = 0; i < attempts.length; i++) {
         const wait = attempts[i];
@@ -71,12 +67,12 @@ app.post("/icabbi-hook", (req, res) => {
     const driver_id = data.driver ? data.driver.id : null;
     const vehicle_id = data.driver && data.driver.vehicle ? data.driver.vehicle.id : null;
 
-    console.log(`[INFO] driver_id: ${driver_id}`);
-    console.log(`[INFO] vehicle_id: ${vehicle_id}`);
+    console.log("[INFO] driver_id:", driver_id);
+    console.log("[INFO] vehicle_id:", vehicle_id);
 
-    if (!driver_id) {
-        console.log("[ERRO] Driver não encontrado no payload");
-        return res.status(400).json({ error: "Driver não encontrado" });
+    if (!driver_id || !vehicle_id) {
+        console.log("[ERRO] Driver ou vehicle não encontrados no payload");
+        return res.status(400).json({ error: "Driver ou vehicle não encontrados" });
     }
 
     if (data._event === "booking:missed") {
@@ -95,3 +91,4 @@ app.get("/teste", (req, res) => {
 // ===== Rodar o app =====
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Servidor a correr na porta ${PORT}`));
+
