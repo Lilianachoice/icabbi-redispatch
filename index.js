@@ -6,7 +6,7 @@ app.use(express.json());
 
 // ===== Configurações =====
 const API_BASE = "https://api.coolnagour.com/v2/bookings"; // Base da API iCabbi
-const API_KEY = process.env.ICABBI_API_KEY; // Chave segura armazenada no Render
+const API_KEY = process.env.ICABBI_API_KEY; // Chave segura do Render
 
 // ===== Função para reenviar reserva =====
 async function resend_booking(trip_id, vehicle_id, driver_id) {
@@ -18,12 +18,15 @@ async function resend_booking(trip_id, vehicle_id, driver_id) {
         enable_active_queue: false
     };
 
+    console.log("===============================================");
+    console.log("[DISPATCH] Enviando payload para iCabbi:");
+    console.log(JSON.stringify(payload, null, 2));
+
+    // ⚠️ Aqui usamos o header correto para iCabbi
     const headers = {
-        "Authorization": `Bearer ${API_KEY}`,
+        "X-App-Key": API_KEY,         // <--- a chave vai pelo header seguro
         "Content-Type": "application/json"
     };
-
-    console.log("[DISPATCH] Enviando payload para iCabbi:", JSON.stringify(payload));
 
     try {
         const response = await fetch(`${API_BASE}/dispatchbooking`, {
@@ -33,12 +36,16 @@ async function resend_booking(trip_id, vehicle_id, driver_id) {
         });
 
         const respText = await response.text();
+
         if (response.ok) {
             console.log(`[OK] Reserva ${trip_id} reenviada para motorista ${driver_id}`);
         } else {
             console.log(`[ERRO] Não foi possível reenviar ${trip_id}: ${respText}`);
         }
-        console.log("[DISPATCH RESPONSE]", respText);
+
+        console.log("[DISPATCH RESPONSE COMPLETO]", respText);
+        console.log("===============================================");
+
     } catch (err) {
         console.log(`[EXCEÇÃO] Erro ao reenviar ${trip_id}: ${err}`);
     }
@@ -46,7 +53,7 @@ async function resend_booking(trip_id, vehicle_id, driver_id) {
 
 // ===== Função para gerir redispatch automático =====
 async function dispatchWithRetries(trip_id, vehicle_id, driver_id) {
-    const attempts = [30 * 1000, 60 * 1000, 60 * 1000]; // 30s, 1min, 1min para teste rápido
+    const attempts = [30 * 1000, 60 * 1000, 60 * 1000]; // 30s, 1min, 1min
 
     for (let i = 0; i < attempts.length; i++) {
         const wait = attempts[i];
@@ -63,6 +70,9 @@ app.post("/icabbi-hook", (req, res) => {
 
     const driver_id = data.driver ? data.driver.id : null;
     const vehicle_id = data.driver && data.driver.vehicle ? data.driver.vehicle.id : null;
+
+    console.log(`[INFO] driver_id: ${driver_id}`);
+    console.log(`[INFO] vehicle_id: ${vehicle_id}`);
 
     if (!driver_id) {
         console.log("[ERRO] Driver não encontrado no payload");
@@ -81,6 +91,10 @@ app.post("/icabbi-hook", (req, res) => {
 app.get("/teste", (req, res) => {
     res.send("Servidor a correr! ✅");
 });
+
+// ===== Rodar o app =====
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Servidor a correr na porta ${PORT}`));
 
 // ===== Rodar o app =====
 const PORT = process.env.PORT || 3000;
