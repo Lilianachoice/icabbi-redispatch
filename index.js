@@ -19,7 +19,7 @@ async function resend_booking(trip_id, vehicle_id, driver_id) {
     };
 
     const headers = {
-        "Authorization": API_KEY, // só a chave, sem "Basic" ou "Bearer"
+        "Authorization": `Basic ${API_KEY}`,
         "Content-Type": "application/json"
     };
 
