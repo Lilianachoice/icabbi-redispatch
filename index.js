@@ -5,7 +5,7 @@ const app = express();
 app.use(express.json());
 
 // ===== Configurações =====
-const API_KEY = "Basic NmExY2VjMWJkZDMyMzQ5ZDY4OTlmNGQxNGM4MjE2Y2UxZjBhYzQ4NjpiYjM5OWM3MjhkZDhhNzQ5ZmY3NDk2MzJhZjQ2YjZlNmI2YzQ1ZTU5"; // substitui pela tua
+const API_KEY = "process.env.ICABBI_API_KEY"; // substitui pela tua
 const API_BASE = "https://eu2.coolnagour.com/dispatch/operator/overview"; // URL real da API
 
 // ===== Rota de teste =====
