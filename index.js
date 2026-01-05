@@ -23,19 +23,22 @@ async function resend_booking(trip_id, vehicle_id, driver_id) {
         "Content-Type": "application/json"
     };
 
+    console.log("[DISPATCH] Enviando payload para iCabbi:", JSON.stringify(payload));
+
     try {
-        const response = await fetch(`${API_BASE}/dispatchbooking`, { // <<-- endpoint correto
+        const response = await fetch(`${API_BASE}/dispatchbooking`, {
             method: "POST",
             headers,
             body: JSON.stringify(payload)
         });
 
+        const respText = await response.text();
         if (response.ok) {
             console.log(`[OK] Reserva ${trip_id} reenviada para motorista ${driver_id}`);
         } else {
-            const text = await response.text();
-            console.log(`[ERRO] Não foi possível reenviar ${trip_id}: ${text}`);
+            console.log(`[ERRO] Não foi possível reenviar ${trip_id}: ${respText}`);
         }
+        console.log("[DISPATCH RESPONSE]", respText);
     } catch (err) {
         console.log(`[EXCEÇÃO] Erro ao reenviar ${trip_id}: ${err}`);
     }
@@ -43,11 +46,11 @@ async function resend_booking(trip_id, vehicle_id, driver_id) {
 
 // ===== Função para gerir redispatch automático =====
 async function dispatchWithRetries(trip_id, vehicle_id, driver_id) {
-    const attempts = [3 * 60 * 1000, 5 * 60 * 1000, 5 * 60 * 1000]; // 3min, 5min, 5min
+    const attempts = [30 * 1000, 60 * 1000, 60 * 1000]; // 30s, 1min, 1min para teste rápido
 
     for (let i = 0; i < attempts.length; i++) {
         const wait = attempts[i];
-        console.log(`[INFO] Tentativa ${i + 1} para trip_id ${trip_id} - aguardando ${wait / 60000} minutos`);
+        console.log(`[INFO] Tentativa ${i + 1} para trip_id ${trip_id} - aguardando ${wait / 1000} segundos`);
         await new Promise(r => setTimeout(r, wait));
         await resend_booking(trip_id, vehicle_id, driver_id);
     }
@@ -67,6 +70,7 @@ app.post("/icabbi-hook", (req, res) => {
     }
 
     if (data._event === "booking:missed") {
+        console.log(`[INFO] Evento missed detectado para trip_id ${data.external_booking_id}`);
         dispatchWithRetries(data.external_booking_id, vehicle_id, driver_id);
     }
 
