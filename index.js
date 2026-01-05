@@ -5,7 +5,7 @@ const app = express();
 app.use(express.json());
 
 // ===== Configurações =====
-const API_BASE = "https://eu2.coolnagour.com/dispatch/operator/overview"; // URL da API iCabbi
+const API_BASE = "https://api.coolnagour.com/v2/bookings"; // URL da API iCabbi
 const API_KEY = process.env.ICABBI_API_KEY; // chave segura do Render
 
 // ===== Função para reenviar reserva =====
