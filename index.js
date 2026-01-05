@@ -95,7 +95,3 @@ app.get("/teste", (req, res) => {
 // ===== Rodar o app =====
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Servidor a correr na porta ${PORT}`));
-
-// ===== Rodar o app =====
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Servidor a correr na porta ${PORT}`));
