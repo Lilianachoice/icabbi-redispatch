@@ -5,8 +5,8 @@ const app = express();
 app.use(express.json());
 
 // ===== Configurações =====
-const API_BASE = "https://api.coolnagour.com/v2/bookings"; // URL da API iCabbi
-const API_KEY = process.env.ICABBI_API_KEY; // chave segura do Render
+const API_BASE = "https://api.coolnagour.com/v2/bookings"; // Base da API iCabbi
+const API_KEY = process.env.ICABBI_API_KEY; // Chave segura armazenada no Render
 
 // ===== Função para reenviar reserva =====
 async function resend_booking(trip_id, vehicle_id, driver_id) {
@@ -24,7 +24,7 @@ async function resend_booking(trip_id, vehicle_id, driver_id) {
     };
 
     try {
-        const response = await fetch(`${API_BASE}/dispatch_booking`, {
+        const response = await fetch(`${API_BASE}/dispatchbooking`, { // <<-- endpoint correto
             method: "POST",
             headers,
             body: JSON.stringify(payload)
