@@ -63,9 +63,9 @@ async function dispatchWithRetries(trip_id, driver_id, vehicle_id) {
   console.log(`[INFO] Redispatch iniciado para ${trip_id}`);
 
   const attempts = [
-    30 * 1000,
-    5 * 60 * 1000,
-    5 * 60 * 1000
+  30 * 1000,
+  30 * 1000,
+  30 * 1000
   ];
 
   for (let i = 0; i < attempts.length; i++) {
