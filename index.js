@@ -9,24 +9,20 @@ const API_BASE = "https://api.coolnagour.com/v2/bookings"; // endpoint da iCabbi
 const API_KEY = process.env.ICABBI_API_KEY; // chave segura do Render
 
 // ===== CONTROLO DE REDISPATCH ATIVO =====
-const activeRedispatch = new Set();
+const activeRedispatch = new Map(); // trip_id -> timestamp de início
 
 // ===== Função para reenviar reserva =====
 async function resend_booking(trip_id, vehicle_id, driver_id) {
   const payload = {
     trip_id,
+    vehicle_id,
     driver_id,
     allow_decline: true,
     enable_active_queue: false
   };
 
-  // adiciona vehicle_id apenas se existir
-  if (vehicle_id) {
-    payload.vehicle_id = vehicle_id;
-  }
-
   console.log("===============================================");
-  console.log("[DISPATCH] Payload:", JSON.stringify(payload, null, 2));
+  console.log("[DISPATCH] Enviando payload para iCabbi:", payload);
 
   const headers = {
     "Authorization": `Basic ${API_KEY}`,
@@ -43,9 +39,9 @@ async function resend_booking(trip_id, vehicle_id, driver_id) {
     const result = await response.json();
 
     if (response.ok && !result.error) {
-      console.log(`[OK] Reserva ${trip_id} reenviada para driver ${driver_id}`);
+      console.log(`[OK] Reserva ${trip_id} reenviada para motorista ${driver_id}`);
     } else {
-      console.log(`[ERRO] Não foi possível reenviar ${trip_id}:`, JSON.stringify(result, null, 2));
+      console.log(`[ERRO] Não foi possível reenviar ${trip_id}:`, result);
     }
 
     console.log("[DISPATCH RESPONSE COMPLETO]", JSON.stringify(result, null, 2));
@@ -56,26 +52,29 @@ async function resend_booking(trip_id, vehicle_id, driver_id) {
   console.log("===============================================");
 }
 
-// ===== Função de redispatch com controlo e limite de 3 tentativas =====
+// ===== Função de redispatch com controlo =====
 async function dispatchWithRetries(trip_id, vehicle_id, driver_id) {
   if (activeRedispatch.has(trip_id)) {
     console.log(`[INFO] Redispatch já ativo para ${trip_id}, ignorado`);
     return;
   }
 
-  activeRedispatch.add(trip_id);
+  activeRedispatch.set(trip_id, Date.now());
   console.log(`[INFO] Redispatch iniciado para ${trip_id}`);
 
-  // Limite de 3 tentativas de 30 segundos cada
   const attempts = [
-    30 * 1000, // 30s
-    30 * 1000, // 30s
-    30 * 1000  // 30s
+    90 * 1000, // 1 min 30 seg
+    90 * 1000, // 1 min 30 seg
+    90 * 1000  // 1 min 30 seg
   ];
 
   for (let i = 0; i < attempts.length; i++) {
     const wait = attempts[i];
-    console.log(`[INFO] Tentativa ${i + 1} para trip_id ${trip_id} - aguardando ${wait / 1000}s`);
+
+    console.log(
+      `[INFO] Tentativa ${i + 1} para trip_id ${trip_id} - aguardando ${wait / 1000}s`
+    );
+
     await new Promise(r => setTimeout(r, wait));
     await resend_booking(trip_id, vehicle_id, driver_id);
   }
@@ -87,21 +86,20 @@ async function dispatchWithRetries(trip_id, vehicle_id, driver_id) {
 // ===== Webhook =====
 app.post("/icabbi-hook", (req, res) => {
   const data = req.body;
-  console.log("[WEBHOOK RECEBIDO]", JSON.stringify(data, null, 2));
 
   if (data._event !== "booking:missed") {
     return res.json({ status: "ignorado" });
   }
 
-  const trip_id = data.trip_id; 
+  const trip_id = data.trip_id; // trip_id correto da iCabbi
   const driver_id = data.driver_id;
-  const vehicle_id = data.vehicle?.id; // opcional, pode ser undefined
+  const vehicle_id = data.vehicle?.id;
 
   console.log(`[INFO] Evento booking:missed detectado para trip_id ${trip_id}`);
   console.log(`[INFO] driver_id: ${driver_id}`);
   console.log(`[INFO] vehicle_id: ${vehicle_id}`);
 
-  if (!trip_id || !driver_id) {
+  if (!trip_id || !driver_id || !vehicle_id) {
     console.log("[ERRO] Dados insuficientes para redispatch");
     return res.status(400).json({ error: "Dados insuficientes" });
   }
@@ -110,7 +108,7 @@ app.post("/icabbi-hook", (req, res) => {
   res.json({ status: "ok" });
 });
 
-// ===== Rota de teste =====
+// ===== Teste =====
 app.get("/teste", (req, res) => {
   res.send("Servidor a correr! ✅");
 });
